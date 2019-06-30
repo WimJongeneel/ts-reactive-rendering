@@ -18,13 +18,13 @@ Create a DOM:
 const app = createElement(
   'div',
   { 'id': 'root' },
-  {
+  new Map().set(
     'h1': createElement(
       'h1',
       { 'class': 'header' },
-      { 'txt': createText('hello world') }
+      new Map().set('txt': createText('hello world'))
     )
-  }
+  )
 )
 
 const rootElem = renderDOM('root', app)
@@ -36,13 +36,13 @@ Create second version of this DOM with some changes:
 const app1 = createElement(
   'div',
   { 'id': 'root-updated' },
-  {
-    'h1': createElement(
+  new Map().set(
+    'h1', createElement(
       'h1',
       { 'class': 'header-updated', id: 'id-new' },
-      { 'txt': createText('hello world update') }
+      new Map().set( createText('hello world update') )
     )
-  }
+  )
 )
 ```
 
@@ -88,3 +88,13 @@ This example will create and apply the following update. Note that it will updat
   ]
 }
 ```
+
+## Updating childs
+
+Childnodes do have keys to identify previous versions of a node. We nees to set manual keys because their index in the collection of childs is no garanty for being the same node, their could have been child inserted inbetween or childs have been deleted. This concept of childs being deleted or inserted in a collection of nodes while still wanting to preserve versions between virtual DOM instances is the source for a lot of the complexity of the child diffing alogratim.
+
+The rules for child are as follows:
+
+- If new keys occure, the will be added on their index without affecting existing nodes.
+- If keys don't occur in the new node they will be removed (**WIP**).
+- childs with the same key will always be updated with the smallest diff, unless the keys are in a different order then in the old tree. Adding new nodes inbetween and deleting existing ones doesn't affect this. If the keys are in a different order, all the child from the first child that is out of order will be completely rerenderd.
