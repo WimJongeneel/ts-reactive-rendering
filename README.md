@@ -1,4 +1,4 @@
-# A virtual DOM in typescirpt
+# A virtual DOM in typescript
 
 This project contains a virtual DOM implementation in TypeScript.
 
