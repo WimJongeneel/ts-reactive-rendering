@@ -55,11 +55,22 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdate
 
 const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
   const oldTags = Array.from(oldChilds.keys())
+  const removedTags = oldTags
+    .map((t, i) => ({ prev: oldTags[i - 1], tag: t }))
+    .filter(t => newChilds.has(t.tag) == false)
 
   let lastUpdateIndex = 0;
   let updateInSameOrder = true
 
   const updates: ChildUpdater[] = []
+
+  const deleteTagsForTag = (nc: string) => {
+    const rmt = removedTags.find(t => t.prev == nc)
+    if (rmt) {
+      updates.push({ kind: 'delete' })
+      deleteTagsForTag(rmt.tag)
+    }
+  }
 
   newChilds.forEach((_, nc) => {
     const isNewChild = oldChilds.has(nc) == false
@@ -83,6 +94,7 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
       }
 
       updates.push(createDiff(oldChilds.get(nc), newChilds.get(nc)))
+      deleteTagsForTag(nc)
       return
     }
 
@@ -91,6 +103,7 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
       return
     } else {
       updates.push({ kind: 'replace', newNode: newChilds.get(nc) })
+      deleteTagsForTag(nc)
       return
     }
   })

@@ -19,3 +19,7 @@ export const createText = (text: string): VDomNode => ({
   kind: 'text',
   text
 })
+
+export const createSingleChild = (c: VDomNode) => new Map().set('c', c)
+
+export const createChildText = (txt: string) => new Map().set('c', createText(txt))
