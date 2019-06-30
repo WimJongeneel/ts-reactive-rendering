@@ -19,7 +19,7 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
   return elem
 }
 
-export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): void => {
+export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent: HTMLElement): void => {
   if (updater.kind == 'replace') {
     elem.replaceWith(renderElement(updater.newNode))
     return
@@ -51,7 +51,11 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): void =
     }
 
     if (childUpdater.kind == 'insert') {
-      elem.childNodes[i + offset - 1].after(renderElement(childUpdater.node))
+      if (elem.childNodes[i + offset - 1]) {
+        elem.childNodes[i + offset - 1].after(renderElement(childUpdater.node))
+      } else {
+        parent.appendChild(renderElement(childUpdater.node))
+      }
       continue
     }
 
@@ -69,7 +73,7 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): void =
       continue;
     }
 
-    applyUpdate(childElem as HTMLElement, childUpdater)
+    applyUpdate(childElem as HTMLElement, childUpdater, elem)
   }
 }
 

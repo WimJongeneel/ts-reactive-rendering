@@ -18,13 +18,13 @@ const app1 = createElement(
   'div',
   { 'id': 'root-updated' },
   new Map().set(
-    'h1', createElement(
+    'x', createElement(
       'h1',
       { 'class': 'header-updated', id: 'id-new' },
       new Map().set('txt', createText('hello world update'))
     )
   ).set(
-    'h3', createElement(
+    'xx', createElement(
       'h3',
       {},
       new Map().set('txt', createText('h3'))
@@ -110,16 +110,16 @@ const rootElem = renderDOM('root', app)
 
 const diff = createDiff(app, app1)
 console.log(JSON.stringify(diff, null, '  '))
-applyUpdate(rootElem, diff)
+applyUpdate(rootElem, diff, rootElem)
 
 const diff1 = createDiff(app1, app2)
 console.log(JSON.stringify(diff1, null, '  '))
-applyUpdate(rootElem, diff1)
+applyUpdate(rootElem, diff1, rootElem)
 
 const diff2 = createDiff(app2, app3)
 console.log(JSON.stringify(diff2, null, '  '))
-applyUpdate(rootElem, diff2)
+applyUpdate(rootElem, diff2, rootElem)
 
 const diff3 = createDiff(app3, app4)
 console.log(JSON.stringify(diff3, null, '  '))
-applyUpdate(rootElem, diff3)
+applyUpdate(rootElem, diff3, rootElem)
