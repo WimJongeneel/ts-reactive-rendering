@@ -44,18 +44,56 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdate
       .reduce((upd, att) => ({ ...upd, [att]: newNode.attributes[att] }), {})
   }
 
-  const childsUpdater: ChildUpdater[] = Object.keys(newNode.childeren)
-    .map<ChildUpdater>(key => {
-      const oldChild = oldNode.childeren[key]
-      if (oldChild == undefined) {
-        return { kind: 'insert', node: newNode.childeren[key] }
-      }
-      return createDiff(oldChild, newNode.childeren[key])
-    })
+  const childsUpdater: ChildUpdater[] = childsDiff(oldNode.childeren, newNode.childeren)
 
   return {
     kind: 'update',
     attributes: attUpdater,
     childeren: childsUpdater
   }
+}
+
+const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
+  const oldTags = Array.from(oldChilds.keys())
+
+  let lastUpdateIndex = 0;
+  let updateInSameOrder = true
+
+  const updates: ChildUpdater[] = []
+
+  newChilds.forEach((_, nc) => {
+    const isNewChild = oldChilds.has(nc) == false
+    const isLonger = updates.filter(x => x.kind != 'insert').length >= oldChilds.size
+
+    if (oldChilds.has(nc) && newChilds.has(nc) && oldTags.indexOf(nc) < lastUpdateIndex) {
+      updateInSameOrder = false
+    }
+
+    if (updateInSameOrder) {
+      lastUpdateIndex = isNewChild ? lastUpdateIndex : oldTags.indexOf(nc)
+
+      if (isNewChild) {
+        updates.push({ kind: 'insert', node: newChilds.get(nc) })
+        return
+      }
+
+      if (isLonger) {
+        updates.push({ kind: 'insert', node: newChilds.get(nc) })
+        return
+      }
+
+      updates.push(createDiff(oldChilds.get(nc), newChilds.get(nc)))
+      return
+    }
+
+    if (isLonger) {
+      updates.push({ kind: 'insert', node: newChilds.get(nc) })
+      return
+    } else {
+      updates.push({ kind: 'replace', newNode: newChilds.get(nc) })
+      return
+    }
+  })
+
+  return updates
 }

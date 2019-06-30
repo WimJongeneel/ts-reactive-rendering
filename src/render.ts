@@ -12,9 +12,9 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
     elem.setAttribute(att, rootNode.attributes[att].toString())
   }
 
-  for (const child in rootNode.childeren) {
-    elem.appendChild(renderElement(rootNode.childeren[child]))
-  }
+  rootNode.childeren.forEach(child =>
+    elem.appendChild(renderElement(child))
+  )
 
   return elem
 }
@@ -42,26 +42,27 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): void =
     elem.setAttribute(att, updater.attributes.set[att].toString())
   }
 
-  let insertCount = 0
+  let offset = 0
   for (let i = 0; i < updater.childeren.length; i++) {
-    const childElem = elem.childNodes[i + insertCount]
     const childUpdater = updater.childeren[i]
 
     if (childUpdater.kind == 'skip') {
       continue
     }
 
-    if (childUpdater.kind == 'delete') {
-      childElem.remove()
-      insertCount -= 1
+    if (childUpdater.kind == 'insert') {
+      elem.childNodes[i + offset - 1].after(renderElement(childUpdater.node))
       continue
     }
 
-    if (childUpdater.kind == 'insert') {
-      childElem.before(renderElement(childUpdater.node))
-      insertCount += 1
+    const childElem = elem.childNodes[i + offset]
+
+    if (childUpdater.kind == 'delete') {
+      childElem.remove()
+      offset -= 1
       continue
     }
+
 
     if (childUpdater.kind == 'replace') {
       childElem.replaceWith(renderElement(childUpdater.newNode))

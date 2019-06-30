@@ -5,6 +5,8 @@ module.exports = {
       path: __dirname + "/dist"
   },
 
+  mode: 'development',
+
   // Enable sourcemaps for debugging webpack's output.
   devtool: false,
 
