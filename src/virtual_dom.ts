@@ -20,6 +20,4 @@ export const createText = (text: string): VDomNode => ({
   text
 })
 
-export const createSingleChild = (c: VDomNode) => new Map().set('c', c)
-
-export const createChildText = (txt: string) => new Map().set('c', createText(txt))
+export const createEmptyChildsMap = () => new Map<string, VDomNode>()

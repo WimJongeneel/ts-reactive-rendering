@@ -122,4 +122,4 @@ applyUpdate(rootElem, diff2)
 
 const diff3 = createDiff(app3, app4)
 console.log(JSON.stringify(diff3, null, '  '))
-applyUpdate(rootElem, diff3 )
+applyUpdate(rootElem, diff3)
