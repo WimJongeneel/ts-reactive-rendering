@@ -1,33 +1,54 @@
-import { createElement, createText } from "./virtual_dom";
+import { child, createElement, createText } from "./virtual_dom";
 import { createDiff } from "./diffs";
 import { renderDOM, applyUpdate } from "./render";
 
 const app = createElement(
   'div',
   { 'id': 'root' },
-  new Map().set(
+  child(
     'h1', createElement(
       'h1',
       { 'class': 'header' },
-      new Map().set('txt', createText('hello world'))
+      child('txt', createText('hello world'))
     )
+    )
+    .set(
+      'xx', createElement(
+        'h3',
+        {},
+        child('txt', createText('h3 first'))
+      )
   )
+  .set(
+    'foo', createElement(
+      'div',
+      {},
+      child('txt', createText('FOO'))
+    )
+)
 )
 
 const app1 = createElement(
   'div',
   { 'id': 'root-updated' },
-  new Map().set(
-    'x', createElement(
+  child(
+    'h3', createElement(
       'h1',
-      { 'class': 'header-updated', id: 'id-new' },
-      new Map().set('txt', createText('hello world update'))
+      { 'class': 'header' },
+      child('txt', createText('hello world - updated'))
     )
   ).set(
     'xx', createElement(
       'h3',
       {},
-      new Map().set('txt', createText('h3'))
+      child('txt', createText('h3 new'))
+    )
+  )
+  .set(
+    'yy', createElement(
+      'h3',
+      {},
+      child('txt', createText('h3 2nd'))
     )
   )
 )
@@ -35,72 +56,11 @@ const app1 = createElement(
 const app2 = createElement(
   'div',
   { 'id': 'root-updated' },
-  new Map().set(
-    'h1', createElement(
-      'h1',
-      { 'class': 'header-updated', id: 'id-new' },
-      new Map().set('txt', createText('hello world update'))
-    )
-  ).set(
-    'h7', createElement(
-      'h2',
-      {},
-      new Map().set('txt', createText('h2'))
-    )
-  ).set(
-    'h3', createElement(
+  child(
+    'yy', createElement(
       'h3',
       {},
-      new Map().set('txt', createText('h3'))
-    )
-  ).set(
-    'h4', createElement(
-      'h3',
-      {},
-      new Map().set('txt', createText('h4'))
-    )
-  )
-)
-
-const app3 = createElement(
-  'div',
-  { 'id': 'root-updated' },
-  new Map().set(
-    'h1', createElement(
-      'h1',
-      { 'class': 'header-updated', id: 'id-new' },
-      new Map().set('txt', createText('hello world update'))
-    )
-  ).set(
-    'h4', createElement(
-      'h3',
-      {},
-      new Map().set('txt', createText('h4 new'))
-    )
-  )
-)
-
-const app4 = createElement(
-  'div',
-  { 'id': 'root-updated' },
-  new Map().set(
-    'h1', createElement(
-      'h1',
-      { 'class': 'header-updated', id: 'id-new' },
-      new Map().set('txt', createText('hello world update'))
-    )
-  ).set(
-    'asd', createElement(
-      'span',
-      {},
-      new Map().set('txt', createText('span'))
-    )
-  )
-  .set(
-    'h4', createElement(
-      'h3',
-      {},
-      new Map().set('txt', createText('h4 new'))
+      child('txt', createText('h3 2nd'))
     )
   )
 )
@@ -108,18 +68,13 @@ const app4 = createElement(
 const rootElem = renderDOM('root', app)
 
 
-const diff = createDiff(app, app1)
-console.log(JSON.stringify(diff, null, '  '))
-applyUpdate(rootElem, diff, rootElem)
+const diffV2 = createDiff(app, app1, true)
+console.log(diffV2)
 
-const diff1 = createDiff(app1, app2)
-console.log(JSON.stringify(diff1, null, '  '))
-applyUpdate(rootElem, diff1, rootElem)
+setTimeout(() => applyUpdate(rootElem, diffV2, rootElem), 1500)
 
-const diff2 = createDiff(app2, app3)
-console.log(JSON.stringify(diff2, null, '  '))
-applyUpdate(rootElem, diff2, rootElem)
+const diffV3 = createDiff(app1, app2, true)
+console.log(diffV3)
 
-const diff3 = createDiff(app3, app4)
-console.log(JSON.stringify(diff3, null, '  '))
-applyUpdate(rootElem, diff3, rootElem)
+
+setTimeout(() => applyUpdate(rootElem, diffV3, rootElem), 3000)

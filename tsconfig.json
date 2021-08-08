@@ -6,6 +6,7 @@
       "module": "commonjs",
       "target": "es5",
       "jsx": "react",
+      "downlevelIteration": true,
       "lib": [
         "es2015",
         "es6",

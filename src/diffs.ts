@@ -1,62 +1,90 @@
-import { VDomNode } from "./virtual_dom";
+import { VDOMAttributes, VDomNode, VDOMTextNode } from "./virtual_dom";
 
 type AttributesUpdater = {
-  set: { [_: string]: string | number | boolean }
-  delete: string[]
+  set: VDOMAttributes
+  remove: string[]
 }
 
-type ChildUpdater =
-  | VDomNodeUpdater
-  | { kind: 'insert', node: VDomNode }
+interface InsertOperation {
+  kind: 'insert', node: VDomNode
+}
 
-export type VDomNodeUpdater = {
+interface UpdateOperation {
   kind: 'update',
   attributes: AttributesUpdater,
   childeren: ChildUpdater[]
-} | {
+}
+
+interface ReplaceOperation {
   kind: 'replace',
   newNode: VDomNode
-} | {
-  kind: 'delete'
-} | {
+}
+
+interface RemoveOperation {
+  kind: 'remove'
+}
+
+interface SkipOperation {
   kind: 'skip'
 }
 
+export type VDomNodeUpdater = 
+  | UpdateOperation
+  | ReplaceOperation
+  | RemoveOperation
+  | SkipOperation
+  
+export type ChildUpdater =
+  | UpdateOperation
+  | ReplaceOperation
+  | RemoveOperation
+  | SkipOperation
+  | InsertOperation
 
-export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdater => {
+const skip = (): SkipOperation => ({ kind: 'skip' })
+
+const replace = (newNode: VDomNode): ReplaceOperation => ({ kind: 'replace', newNode })
+
+const update = (attributes: AttributesUpdater, childeren: ChildUpdater[]): UpdateOperation => ({ 
+   kind: 'update',
+   attributes,
+   childeren
+})
+
+const remove = (): RemoveOperation => ({ kind: 'remove' })
+
+const insert = (node: VDomNode): InsertOperation => ({ kind: 'insert', node })
+
+export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false): VDomNodeUpdater => {
   if (oldNode.kind == 'text' && newNode.kind == 'text' && oldNode.text == newNode.text) {
-    return { kind: 'skip' }
+    return skip()
   }
 
   /*
    * If a textnode is updated we need to replace it completly
    */
   if (oldNode.kind == 'text' || newNode.kind == 'text') {
-    return { kind: 'replace', newNode }
+    return replace(newNode)
   }
 
   /*
    * If the tagname of a node is changed we have to replace it completly
    */
   if (oldNode.tagname != oldNode.tagname) {
-    return { kind: 'replace', newNode }
+    return replace(newNode)
   }
 
   const attUpdater: AttributesUpdater = {
-    delete: Object.keys(oldNode.attributes)
+    remove: Object.keys(oldNode.attributes)
       .filter(att => Object.keys(newNode.attributes).indexOf(att) == -1),
     set: Object.keys(newNode.attributes)
       .filter(att => oldNode.attributes[att] != newNode.attributes[att])
       .reduce((upd, att) => ({ ...upd, [att]: newNode.attributes[att] }), {})
   }
 
-  const childsUpdater: ChildUpdater[] = childsDiff(oldNode.childeren, newNode.childeren)
+  const childsUpdater: ChildUpdater[] = usev2 ? childsDiff1(oldNode.childeren, newNode.childeren) : childsDiff(oldNode.childeren, newNode.childeren)
 
-  return {
-    kind: 'update',
-    attributes: attUpdater,
-    childeren: childsUpdater
-  }
+  return update(attUpdater, childsUpdater)
 }
 
 const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
@@ -81,7 +109,7 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
   const deleteTagsForTag = (nc: string) => {
     const rmt = removedTags.find(t => t.prev == nc)
     if (rmt) {
-      updates.push({ kind: 'delete' })
+      updates.push(remove())
       deleteTagsForTag(rmt.tag)
     }
   }
@@ -91,7 +119,7 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
    * We need this because in this case their is no presing tag to connect the deleting on
    */
   if (oldTags.length == removedTags.length) {
-    oldTags.forEach(t => updates.push({ kind: 'delete' }))
+    oldTags.forEach(t => updates.push(remove()))
   } else if (
     /*
      * Add a delete updater if the first tag was delete
@@ -99,13 +127,13 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
      */
     removedTags[0] != undefined && removedTags[0].tag == oldTags[0]
   ) {
-    updates.push({ kind: 'delete' })
+    updates.push(remove())
   }
 
   newChilds.forEach((_, nc) => {
     const isNewChild = oldChilds.has(nc) == false
     /*
-     * If we are pass the length of the oldChilds we have to insert everything 
+     * If we are past the length of the oldChilds we have to insert everything 
      * instead of trying to produce an efficient diff
      */
     const isLonger = updates.filter(x => x.kind != 'insert').length >= oldChilds.size
@@ -123,7 +151,7 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
       lastUpdateIndex = isNewChild ? lastUpdateIndex : oldTags.indexOf(nc)
 
       if (isNewChild || isLonger) {
-        updates.push({ kind: 'insert', node: newChilds.get(nc) })
+        updates.push(insert(newChilds.get(nc)))
         return
       }
 
@@ -133,14 +161,55 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
     }
 
     if (isLonger) {
-      updates.push({ kind: 'insert', node: newChilds.get(nc) })
+      updates.push(insert(newChilds.get(nc)))
       return
     } else {
-      updates.push({ kind: 'replace', newNode: newChilds.get(nc) })
+      updates.push(replace(newChilds.get(nc)))
       deleteTagsForTag(nc)
       return
     }
   })
 
   return updates
+}
+
+const childsDiff1 = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
+  const remainingOldChilds = [ ...oldChilds ]
+  const operations: ChildUpdater[] = []
+
+  for(const [newKey, newElem] of newChilds) {
+
+    if(remainingOldChilds.length == 0) {
+      operations.push(insert(newElem))
+      continue
+    }
+    
+    let [currentKey, currentElem] = remainingOldChilds[0]
+
+    if(currentKey == newKey) {
+      operations.push(createDiff(currentElem, newElem))
+      remainingOldChilds.shift()
+      continue
+    }
+
+    // if key is new or already removed
+    if(remainingOldChilds.map(([key]) => key).indexOf(newKey) == -1) {
+      operations.push(insert(newElem))
+      remainingOldChilds.shift()
+      continue
+    } else {
+      while(currentKey != newKey) {
+        remainingOldChilds.shift()
+        operations.push(remove());
+        [currentKey, currentElem] = remainingOldChilds[0]
+      }
+      if(currentKey != newKey) console.error('remove untill broke')
+      operations.push(createDiff(currentElem, newElem))
+      remainingOldChilds.shift()
+    }
+  }
+
+  for(const _ of remainingOldChilds) operations.push(remove())
+
+  return operations
 }

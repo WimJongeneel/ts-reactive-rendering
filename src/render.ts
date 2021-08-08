@@ -20,21 +20,21 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
 }
 
 export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent: HTMLElement): void => {
+  if (updater.kind == 'skip') {
+    return
+  }
+
   if (updater.kind == 'replace') {
     elem.replaceWith(renderElement(updater.newNode))
     return
   }
 
-  if (updater.kind == 'delete') {
+  if (updater.kind == 'remove') {
     elem.remove()
     return
   }
 
-  if (updater.kind == 'skip') {
-    return
-  }
-
-  for (const att in updater.attributes.delete) {
+  for (const att in updater.attributes.remove) {
     elem.removeAttribute(att)
   }
 
@@ -54,6 +54,7 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent:
       if (elem.childNodes[i + offset - 1]) {
         elem.childNodes[i + offset - 1].after(renderElement(childUpdater.node))
       } else {
+        // this isn't correct if the diff starts of with insert and then remove
         parent.appendChild(renderElement(childUpdater.node))
       }
       continue
@@ -61,7 +62,7 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent:
 
     const childElem = elem.childNodes[i + offset]
 
-    if (childUpdater.kind == 'delete') {
+    if (childUpdater.kind == 'remove') {
       childElem.remove()
       offset -= 1
       continue
