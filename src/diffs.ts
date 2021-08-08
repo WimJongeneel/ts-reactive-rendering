@@ -194,7 +194,7 @@ const childsDiff1 = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VD
 
     // if key is new or already removed
     if(remainingOldChilds.map(([key]) => key).indexOf(newKey) == -1) {
-      operations.push(insert(newElem))
+      operations.push(replace(newElem))
       remainingOldChilds.shift()
       continue
     } else {
