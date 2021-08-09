@@ -58,9 +58,15 @@ const app2 = createElement(
   { 'id': 'root-updated' },
   child(
     'yy', createElement(
-      'h3',
+      'b',
       {},
       child('txt', createText('h3 2nd'))
+    )
+  ).set(
+    'xx', createElement(
+      'h3',
+      {},
+      child('txt', createText('h3 new f'))
     )
   )
 )

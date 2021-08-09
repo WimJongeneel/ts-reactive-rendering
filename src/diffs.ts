@@ -82,7 +82,7 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false):
       .reduce((upd, att) => ({ ...upd, [att]: newNode.attributes[att] }), {})
   }
 
-  const childsUpdater: ChildUpdater[] = usev2 ? childsDiff1(oldNode.childeren, newNode.childeren) : childsDiff(oldNode.childeren, newNode.childeren)
+  const childsUpdater: ChildUpdater[] = usev2 ? childsDiff2(oldNode.childeren, newNode.childeren) : childsDiff(oldNode.childeren, newNode.childeren)
 
   return update(attUpdater, childsUpdater)
 }
@@ -173,43 +173,43 @@ const childsDiff = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDo
   return updates
 }
 
-const childsDiff1 = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
-  const remainingOldChilds = [ ...oldChilds ]
+const childsDiff2 = (oldChilds: Map<string, VDomNode>, newChilds: Map<string, VDomNode>): ChildUpdater[] => {
+  const remainingOldChilds = [ ... oldChilds ]
+  const remainingNewChilds = [ ... newChilds ]
+
   const operations: ChildUpdater[] = []
 
-  for(const [newKey, newElem] of newChilds) {
+  // find the first element that got updated
+  let [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.indexOf(k) != -1) || []
 
-    if(remainingOldChilds.length == 0) {
-      operations.push(insert(newElem))
-      continue
-    }
-    
-    let [currentKey, currentElem] = remainingOldChilds[0]
+  while(nextUpdateKey) {
 
-    if(currentKey == newKey) {
-      operations.push(createDiff(currentElem, newElem))
-      remainingOldChilds.shift()
-      continue
-    }
-
-    // if key is new or already removed
-    if(remainingOldChilds.map(([key]) => key).indexOf(newKey) == -1) {
-      operations.push(replace(newElem))
-      remainingOldChilds.shift()
-      continue
-    } else {
-      while(currentKey != newKey) {
-        remainingOldChilds.shift()
-        operations.push(remove());
-        [currentKey, currentElem] = remainingOldChilds[0]
-      }
-      if(currentKey != newKey) console.error('remove untill broke')
-      operations.push(createDiff(currentElem, newElem))
+    // first remove all old childs before the update
+    while(remainingOldChilds[0] && remainingOldChilds[0][0] != nextUpdateKey) {
+      operations.push(remove())
       remainingOldChilds.shift()
     }
+
+    // then insert all new childs before the update
+    while(remainingNewChilds[0] && remainingNewChilds[0][0] != nextUpdateKey) {
+      operations.push(insert(remainingNewChilds.shift()[1]))
+    }
+
+    // create the update
+    operations.push(createDiff(remainingOldChilds.shift()[1], remainingNewChilds.shift()[1]))
+
+    // find the next update
+    ; [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.indexOf(k) != -1) || []
   }
 
-  for(const _ of remainingOldChilds) operations.push(remove())
+  // remove all remaing old childs after the last update
+  while(remainingOldChilds.length > 0) {
+    operations.push(remove())
+    remainingOldChilds.shift()
+  }
+
+  // insert all remaing new childs after the last update
+  while(remainingNewChilds[0]) operations.push(insert(remainingNewChilds.shift()[1]))
 
   return operations
 }
