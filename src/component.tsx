@@ -27,19 +27,25 @@ export abstract class Component<P, S> {
         if(this.currentRootNode) {
             const diff = createDiff(this.currentRootNode, newRootNode)
             this.currentRootNode = newRootNode
+            console.log({diff})
             return diff
         }
 
+        console.warn('you are updating the props of an uninitialized component')
         this.currentRootNode = newRootNode
-
         return { kind: 'replace', newNode: newRootNode }
+    }
+
+    public initProps(props: P): VDomNode {
+        this.props = props
+        this.currentRootNode = this.render()
+        return this.currentRootNode
     }
     
     public update() {
         const newRootNode = this.render()
         const diff = createDiff(this.currentRootNode, newRootNode)
 
-        if(diff.kind == 'replace') 
         this.currentRootNode = newRootNode
         this.mountedElement = applyUpdate(this.mountedElement, diff)
     }

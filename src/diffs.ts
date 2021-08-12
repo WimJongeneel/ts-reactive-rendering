@@ -1,4 +1,3 @@
-import { applyUpdate } from "./render";
 import { VDOMAttributes, VDomNode } from "./virtual_dom";
 
 type AttributesUpdater = {
@@ -68,15 +67,15 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false):
 
   if('component' in oldNode && 'component' in newNode && oldNode.component == newNode.component && oldNode.instance) {
     newNode.instance = oldNode.instance
-    const diff = newNode.instance.setProps(newNode.props)
-    return diff
+    return newNode.instance.setProps(newNode.props)
   }
 
   if('component' in oldNode || 'component' in newNode) {
     if('component' in oldNode) return replace(newNode)
     if('component' in newNode) {
+      console.log('new component ' + newNode.component.name, oldNode)
       newNode.instance = new newNode.component()
-      return newNode.instance.setProps(newNode.props)
+      return { kind: 'replace', newNode: newNode.instance.initProps(newNode.props) }
     }
   }
 
@@ -107,7 +106,7 @@ const childsDiff2 = (oldChilds: { [_: string]: VDomNode }, newChilds: { [_: stri
   const operations: ChildUpdater[] = []
 
   // find the first element that got updated
-  let [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || []
+  let [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || [null]
 
   while(nextUpdateKey) {
 
@@ -126,7 +125,7 @@ const childsDiff2 = (oldChilds: { [_: string]: VDomNode }, newChilds: { [_: stri
     operations.push(createDiff(remainingOldChilds.shift()[1], remainingNewChilds.shift()[1]))
 
     // find the next update
-    ; [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || []
+    ; [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || [null]
   }
 
   // remove all remaing old childs after the last update

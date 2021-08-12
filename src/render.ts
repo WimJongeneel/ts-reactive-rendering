@@ -13,9 +13,10 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
       return elem
     }
 
+    console.log('rendering new ' + rootNode.component.name)
     rootNode.instance = new rootNode.component()
-    rootNode.instance.setProps(rootNode.props)
-    const elem= renderElement(rootNode.instance.render())
+    const vdom = rootNode.instance.initProps(rootNode.props)
+    const elem= renderElement(vdom)
     rootNode.instance.notifyMounted(elem as HTMLElement)
     return elem
   }
@@ -99,7 +100,7 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): HTMLEl
 
     applyUpdate(childElem as HTMLElement, childUpdater)
   }
-  
+
   return elem
 }
 
