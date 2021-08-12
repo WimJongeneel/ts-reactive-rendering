@@ -27,13 +27,10 @@ export abstract class Component<P, S> {
         if(this.currentRootNode) {
             const diff = createDiff(this.currentRootNode, newRootNode)
             this.currentRootNode = newRootNode
-            console.log({diff})
             return diff
         }
 
-        console.warn('you are updating the props of an uninitialized component')
-        this.currentRootNode = newRootNode
-        return { kind: 'replace', newNode: newRootNode }
+        throw new Error("You are setting the props of an uninitialized component")
     }
 
     public initProps(props: P): VDomNode {
@@ -54,14 +51,8 @@ export abstract class Component<P, S> {
         this.mountedElement = elem
         this.componentDidMount()
     }
-    
-    public unMount() {
-        this.componentWillUnmount()
-        this.mountedElement.remove()
-    }
-    
+      
     public componentDidMount() {}
-    public componentWillUnmount() {}
     
     public abstract render(): VDomNode
 }

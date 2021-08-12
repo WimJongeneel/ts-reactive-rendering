@@ -55,7 +55,8 @@ const remove = (): RemoveOperation => ({ kind: 'remove' })
 
 const insert = (node: VDomNode): InsertOperation => ({ kind: 'insert', node })
 
-export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false): VDomNodeUpdater => {
+export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdater => {
+
   if (typeof oldNode == 'string' && typeof newNode == 'string' && oldNode == newNode) {
     return skip()
   }
@@ -73,7 +74,6 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false):
   if('component' in oldNode || 'component' in newNode) {
     if('component' in oldNode) return replace(newNode)
     if('component' in newNode) {
-      console.log('new component ' + newNode.component.name, oldNode)
       newNode.instance = new newNode.component()
       return { kind: 'replace', newNode: newNode.instance.initProps(newNode.props) }
     }
@@ -94,12 +94,12 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode, usev2 = false):
       .reduce((upd, att) => ({ ...upd, [att]: newNode.props[att] }), {})
   }
 
-  const childsUpdater: ChildUpdater[] = childsDiff2((oldNode.childeren || {}), (newNode.childeren || {}))
+  const childsUpdater: ChildUpdater[] = childsDiff((oldNode.childeren || {}), (newNode.childeren || {}))
 
   return update(attUpdater, childsUpdater)
 }
 
-const childsDiff2 = (oldChilds: { [_: string]: VDomNode }, newChilds: { [_: string]: VDomNode }): ChildUpdater[] => {
+const childsDiff = (oldChilds: { [_: string]: VDomNode }, newChilds: { [_: string]: VDomNode }): ChildUpdater[] => {
   const remainingOldChilds: [string, VDomNode][] = Object.keys(oldChilds).map(k => [ k, oldChilds[k] ])
   const remainingNewChilds: [string, VDomNode][] = Object.keys(newChilds).map(k => [ k, newChilds[k] ])
 

@@ -13,10 +13,8 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
       return elem
     }
 
-    console.log('rendering new ' + rootNode.component.name)
     rootNode.instance = new rootNode.component()
-    const vdom = rootNode.instance.initProps(rootNode.props)
-    const elem= renderElement(vdom)
+    const elem= renderElement( rootNode.instance.initProps(rootNode.props))
     rootNode.instance.notifyMounted(elem as HTMLElement)
     return elem
   }
