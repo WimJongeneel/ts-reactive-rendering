@@ -2,36 +2,52 @@ import { VDomNode } from "./virtual_dom";
 import { VDomNodeUpdater } from "./diffs";
 
 const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
-  if (rootNode.kind == 'text') {
-    return document.createTextNode(rootNode.text)
+  if (typeof rootNode == 'string') {
+    return document.createTextNode(rootNode)
+  }
+
+  if('component' in rootNode) {
+    if(rootNode.instance) {
+      const elem = renderElement(rootNode.instance.render())
+      rootNode.instance.notifyMounted(elem as HTMLElement)
+      return elem
+    }
+
+    rootNode.instance = new rootNode.component()
+    rootNode.instance.setProps(rootNode.props)
+    const elem= renderElement(rootNode.instance.render())
+    rootNode.instance.notifyMounted(elem as HTMLElement)
+    return elem
   }
 
   const elem = document.createElement(rootNode.tagname)
 
-  for (const att in rootNode.attributes) {
-    elem.setAttribute(att, rootNode.attributes[att].toString())
+  for (const att in (rootNode.props || {})) {
+    (elem as any)[att] = rootNode.props[att]
   }
 
-  rootNode.childeren.forEach(child =>
+  Object.keys((rootNode.childeren || {})).map(k => rootNode.childeren[k]).forEach(child =>
     elem.appendChild(renderElement(child))
   )
 
   return elem
 }
 
-export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent: HTMLElement): void => {
+export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater): HTMLElement => {
+  
   if (updater.kind == 'skip') {
-    return
+    return elem
   }
 
   if (updater.kind == 'replace') {
-    elem.replaceWith(renderElement(updater.newNode))
-    return
+    const newElem = renderElement(updater.newNode)
+    elem.replaceWith(newElem)
+    return newElem as HTMLElement
   }
 
   if (updater.kind == 'remove') {
     elem.remove()
-    return
+    return null
   }
 
   for (const att in updater.attributes.remove) {
@@ -39,7 +55,7 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent:
   }
 
   for (const att in updater.attributes.set) {
-    elem.setAttribute(att, updater.attributes.set[att].toString())
+    (elem as any)[att] = updater.attributes.set[att]
   }
 
   let offset = 0
@@ -55,12 +71,17 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent:
         elem.childNodes[i + offset - 1].after(renderElement(childUpdater.node))
       } else {
         // this isn't correct if the diff starts of with insert and then remove
-        parent.appendChild(renderElement(childUpdater.node))
+        elem.appendChild(renderElement(childUpdater.node))
       }
       continue
     }
 
+    
     const childElem = elem.childNodes[i + offset]
+
+    if(childElem == undefined) {
+      console.log(elem, updater, i, offset)
+    }
 
     if (childUpdater.kind == 'remove') {
       childElem.remove()
@@ -71,11 +92,15 @@ export const applyUpdate = (elem: HTMLElement, updater: VDomNodeUpdater, parent:
 
     if (childUpdater.kind == 'replace') {
       childElem.replaceWith(renderElement(childUpdater.newNode))
+      // set currentRoot
       continue;
     }
 
-    applyUpdate(childElem as HTMLElement, childUpdater, elem)
+
+    applyUpdate(childElem as HTMLElement, childUpdater)
   }
+  
+  return elem
 }
 
 export const renderDOM = (htmlId: string, rootNode: VDomNode): HTMLElement => {

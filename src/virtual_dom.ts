@@ -1,33 +1,42 @@
-export type VDOMAttributes = { [_: string]: string | number | boolean }
+import { Component } from './component'
+
+export type VDOMAttributes = { [_: string]: string | number | boolean | Function }
 
 export interface VDOMElement {
-  kind: 'elem'
   tagname: string
-  attributes: VDOMAttributes
-  childeren: Map<string, VDomNode>
+  childeren?: { [_: string]: VDomNode }
+  props?: VDOMAttributes
 }
 
-export interface VDOMTextNode {
-  kind: 'text',
-  text: string
+export interface VDOMComponent {
+  instance?: Component<any, any>
+  props: object
+  component: { new(): Component<any, any> }
 }
 
 export type VDomNode = 
-  | VDOMTextNode
+  | string
   | VDOMElement
+  | VDOMComponent
 
-export const createElement = (tagname: string, attributes: VDOMAttributes = {}, childeren: Map<string, VDomNode> = new Map()): VDOMElement => ({
-  kind: 'elem',
+
+
+export const createElement = (tagname: string, props: VDOMAttributes = {}, childeren: { [_: string]: VDomNode } = {}): VDOMElement => ({
   tagname,
-  attributes,
+  props,
   childeren
 })
 
-export const createText = (text: string): VDOMTextNode => ({
-  kind: 'text',
-  text
+export const createComponent = <P extends object>(component: { new(): Component<P, any> }, props: P): VDOMComponent => ({
+  component,
+  props
 })
 
-export const child = (tagname: string, elem: VDomNode) => createEmptyChildsMap().set(tagname, elem)
+// export const createText = (text: string): VDOMTextNode => ({
+//   kind: 'text',
+//   text
+// })
 
-export const createEmptyChildsMap = () => new Map<string, VDomNode>()
+// export const child = (tagname: string, elem: VDomNode) => createEmptyChildsMap().set(tagname, elem)
+
+// export const createEmptyChildsMap = () => new Map<string, VDomNode>()
