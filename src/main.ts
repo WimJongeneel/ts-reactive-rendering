@@ -1,45 +1,39 @@
-import { VDomNode } from "./virtual_dom";
+import { createComponent, VDomNode } from "./virtual_dom";
 import { createDiff } from "./diffs";
 import { renderDOM, applyUpdate } from "./render";
-import { CountersComponent, ItemComponent, ToDoContainer } from "./component";
+import { CountersComponent, CounterComponent, ToDoContainer } from "./component";
 
-const app: VDomNode = {
-  tagname: 'div',
-  props: { 'id': 'root' },
-  childeren: {
-    h1: {
-      tagname: 'h1',
-      props: { 'class': 'header' },
-      childeren: { txt: 'hello world'}
-    },
-    xx: {
-      tagname: 'h3',
-      props: {  'class': 'header' },
-      childeren: { txt: 'h3 first'}
-    },
-    foo: {
-      tagname: 'div',
-      childeren: { txt: 'FOO' }
-    },
-    btn: {
-      tagname: 'button',
-      childeren: { txt: 'click me' },
-      props: {
-        'onclick': () => alert(1)
-      }
-    }
-  }
-}
+// const app: VDomNode = {
+//   tagname: 'div',
+//   props: { 'id': 'root' },
+//   childeren: {
+//     h1: {
+//       tagname: 'h1',
+//       props: { 'class': 'header' },
+//       childeren: { txt: 'hello world'}
+//     },
+//     xx: {
+//       tagname: 'h3',
+//       props: {  'class': 'header' },
+//       childeren: { txt: 'h3 first'}
+//     },
+//     foo: {
+//       tagname: 'div',
+//       childeren: { txt: 'FOO' }
+//     },
+//     btn: {
+//       tagname: 'button',
+//       childeren: { txt: 'click me' },
+//       props: {
+//         'onclick': () => alert(1)
+//       }
+//     }
+//   }
+// }
 
-const count: VDomNode = {
-  component: CountersComponent,
-  props: {}
-}
+const count: VDomNode = createComponent(CountersComponent, { key: 'root'})
 
-const todos: VDomNode = {
-  component: ToDoContainer,
-  props: {}
-}
+const todos: VDomNode = createComponent(ToDoContainer, { key: 'root'}) 
 
 // const app1 = createElement(
 //   'div',

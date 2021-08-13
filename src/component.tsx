@@ -1,6 +1,6 @@
 import { createDiff, VDomNodeUpdater } from "./diffs"
 import { applyUpdate } from "./render"
-import { createComponent, createElement, VDomNode } from "./virtual_dom"
+import { createComponent, createElement, createText, VDomNode } from "./virtual_dom"
 
 export abstract class Component<P, S> {
     
@@ -11,10 +11,7 @@ export abstract class Component<P, S> {
     private mountedElement: HTMLElement
     
     protected setState(state: S) {
-        if(this.mountedElement == undefined) {
-            console.warn("you are updating an unmounted component")
-            return
-        }
+        if(this.mountedElement == undefined) throw new Error("you are updating an unmounted component")
         
         this.state = state
         this.update()
@@ -23,16 +20,17 @@ export abstract class Component<P, S> {
     public setProps(props: P): VDomNodeUpdater {
         this.props = props
         const newRootNode = this.render()
-
+        
         if(this.currentRootNode) {
             const diff = createDiff(this.currentRootNode, newRootNode)
             this.currentRootNode = newRootNode
+            if(diff.kind == 'replace') console.warn('replacing in setProps')
             return diff
         }
-
+        
         throw new Error("You are setting the props of an uninitialized component")
     }
-
+    
     public initProps(props: P): VDomNode {
         this.props = props
         this.currentRootNode = this.render()
@@ -42,7 +40,7 @@ export abstract class Component<P, S> {
     public update() {
         const newRootNode = this.render()
         const diff = createDiff(this.currentRootNode, newRootNode)
-
+        if(diff.kind == 'replace') console.warn('replacing in update')
         this.currentRootNode = newRootNode
         this.mountedElement = applyUpdate(this.mountedElement, diff)
     }
@@ -51,7 +49,7 @@ export abstract class Component<P, S> {
         this.mountedElement = elem
         this.componentDidMount()
     }
-      
+    
     public componentDidMount() {}
     
     public abstract render(): VDomNode
@@ -64,45 +62,46 @@ export class CountersComponent extends Component<{}, { title: string }> {
     }
     
     render(): VDomNode {
-        return createElement('div', {},
-        {
-            txt1: this.state.title,
-            ip: createElement(
+        return createElement('div', { key: 'div'},
+            createText(this.state.title, 'title'),
+            createElement(
                 'input',
                 {
                     value: this.state.title,
-                    oninput: (e: any) => this.setState({ title: e.target.value})
-                }
+                    oninput: (e: any) => this.setState({ title: e.target.value}),
+                    key: 'input'
+                },
                 ),
-                c1: createComponent(ItemComponent, { title: 'Counter 1'}),
-                c2: createComponent(ItemComponent, { title: 'Counter 2'})
-            }
+                createComponent(CounterComponent, { title: 'Counter 1', key: 'c1'}),
+                createComponent(CounterComponent, { title: 'Counter 2', key: 'c2'})
             )
         }
         
     }
     
-    export class ItemComponent extends Component<{ title: string }, { count: number }> {
+    export class CounterComponent extends Component<{ title: string }, { count: number }> {
         
         state = {
             count: 0
         }
         
         render(): VDomNode {
-            return createElement('div', {},
-            {
-                txt1: this.props.title,
-                hr: createElement('hr'),
-                btn: createElement('button',
-                { onclick: () => this.setState({count: this.state.count - 1}) },
-                { txt: '-' }
+            return createElement('div', { key: 'root' },
+                createText(this.props.title, 'title'),
+                createElement('hr', { key: 'hr' }),
+                createElement('button', {
+                    onclick: () => this.setState({count: this.state.count - 1}),
+                    key: '-'
+                    },
+                    createText('-')
                 ),
-                c: this.state.count.toString(),
-                btn1: createElement('button',
-                { onclick: () => this.setState({count: this.state.count + 1}) },
-                { txt: '+' }
+                createText(this.state.count),
+                createElement('button', { 
+                    onclick: () => this.setState({count: this.state.count + 1}),
+                    key: '+'
+                    },
+                    createText('+')
                 )
-            }
             )
         }
     }
@@ -132,29 +131,21 @@ export class CountersComponent extends Component<{}, { title: string }> {
         }
         
         render() {
-            if(this.state.items == 'loading') return 'loading'
+            if(this.state.items == 'loading') return createText('loading')
             
-            return createElement('div', {}, {
-                top: this.state.top ? createElement('div', {}, {
-                    userId: this.state.top.userId.toString(),
-                    id: this.state.top.id.toString(),
-                    title: this.state.top.title.toString(),
-                    completed: this.state.top.completed.toString(),
-                }) : createElement('div', {}, { txt: 'none'}),
-                items: createElement('ul', {}, {
-                    '1': createElement('li', {
-                        onclick: () => this.setState({...this.state, top: this.state.items[0] as ToDo})
-                    }, { txt:  this.state.items[0].title }),
-                    '2': createElement('li', {
-                        onclick: () => this.setState({...this.state, top: this.state.items[1] as ToDo})
-                    }, { txt:  this.state.items[1].title }),
-                    '3': createElement('li', {
-                        onclick: () => this.setState({...this.state, top: this.state.items[2] as ToDo})
-                    }, { txt:  this.state.items[2].title }),
-                    '4': createElement('li', {
-                        onclick: () => this.setState({...this.state, top: this.state.items[3] as ToDo})
-                    }, { txt:  this.state.items[3].title }),
-                })
-            })
+            return createElement('div', {key: 'div'},
+                this.state.top ? createElement('div', { key: 'top' },
+                    createText(this.state.top.userId.toString(), 'u-i'),
+                    createText(this.state.top.id.toString(), 'id'),
+                    createText(this.state.top.title.toString(), 't'),
+                    createText(this.state.top.completed.toString(), 'c')
+                ) : createText('none', 'top'),
+                createElement('ul', { key: 'items'}, ...this.state.items.map(i => createElement(
+                    'li', { 
+                        key: i.id,
+                        onclick: () => this.setState({ ...this.state, top: i })
+                    }, createText(i.title)
+                )))
+            )
         }
     }
