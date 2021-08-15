@@ -7,7 +7,7 @@ export interface VDOMElement {
   tagname: string
   childeren?: VDomNode[]
   props?: VDOMAttributes
-  key: string | number
+  key: string
 }
 
 export interface VDOMComponent {
@@ -15,13 +15,13 @@ export interface VDOMComponent {
   instance?: Component<any, any>
   props: object
   component: { new(): Component<any, any> }
-  key: string | number
+  key: string
 }
 
 export interface VDOMText {
   kind: 'text',
   value: string
-  key: string | number
+  key: string
 }
 
 export type VDomNode = 
@@ -29,19 +29,16 @@ export type VDomNode =
 | VDOMElement
 | VDOMComponent
 
-export const createElement = (tagname: string, props: VDOMAttributes & { key: string | number }, ...childeren: VDomNode[]): VDOMElement => {
+export const createElement = (tagname: string, props: VDOMAttributes & { key: string }, ...childeren: VDomNode[]): VDOMElement => {
   const key = props.key
   delete props.key
-  return ({
-    kind: 'element',
-    tagname,
-    props,
-    childeren,
-    key
+  return ({ kind: 'element',
+    tagname, props,
+    childeren, key
   })
 }
 
-export const createComponent = <P extends object>(component: { new(): Component<P, any> }, props: P & { key: string | number }): VDOMComponent => {
+export const createComponent = <P extends object>(component: { new(): Component<P, any> }, props: P & { key: string }): VDOMComponent => {
   const key = props.key
   delete props.key
   return ({
@@ -49,7 +46,7 @@ export const createComponent = <P extends object>(component: { new(): Component<
   })  
 }
 
-export const createText = (value: string | number | boolean, key: string | number = '') : VDOMText => ({
+export const createText = (value: string | number | boolean, key: string = '') : VDOMText => ({
   key, kind: 'text', value: value.toString()
 })
 

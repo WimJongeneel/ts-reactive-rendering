@@ -1,7 +1,7 @@
-import { createComponent, VDomNode } from "./virtual_dom";
+import { createComponent, createElement, createText, VDomNode } from "./virtual_dom";
 import { createDiff } from "./diffs";
 import { renderDOM, applyUpdate } from "./render";
-import { CountersComponent, CounterComponent, ToDoContainer } from "./component";
+import { CountersComponent, CounterComponent, ToDoContainer, Component } from "./component";
 
 // const app: VDomNode = {
 //   tagname: 'div',
@@ -78,7 +78,73 @@ const todos: VDomNode = createComponent(ToDoContainer, { key: 'root'})
 //   )
 // )
 
-const rootElem = renderDOM('root', todos)
+interface HeaderComponentProps {
+    title: string
+}
+
+interface HeaderComponentState {
+    header: number
+}
+
+class HeaderComponent extends Component<HeaderComponentProps, HeaderComponentState> {
+    state: HeaderComponentState = {
+        header: 1
+    }
+
+    render() {
+        return createElement(
+            'h' + this.state.header, {
+                key: 'h',
+                onclick: () => this.setState(s => ({...s, header: s.header + 1}))
+            }, 
+            createText(this.props.title + ` (${this.state.header})`)
+        )
+    }
+}
+
+interface HeadersState {
+    title: string
+    headers: number
+}
+
+class Headers extends Component<{}, HeadersState> {
+
+    state: HeadersState = {
+        headers: 1,
+        title: 'title'
+    }
+
+    render() {
+        return createElement('root', {key: 'root'}, 
+            createElement(
+                'input',
+                {
+                    key: 'i',
+                    oninput: (e: any) => this.setState(s => ({...s, title: e.target.value})),
+                    value: this.state.title
+                }
+            ),
+            createElement(
+                'button',
+                {
+                    key: 'b',
+                    onclick: () => this.setState(s => ({...s, headers: s.headers + 1}))
+                },
+                createText('add')
+            ),
+            ...Array.from({length: 10}).map((_, i) => this.state.headers > i ? createComponent(
+                HeaderComponent,
+                {
+                    key: i.toString(),
+                    title: this.state.title
+                }
+            ) : createElement('span', { key: i.toString()}, createText(i.toString())))
+        )
+    }
+}
+
+
+const rootElem = renderDOM('root', createComponent(Headers, {key: 'r'}))
 
 
 // const diffV2 = createDiff(app, app1, true)

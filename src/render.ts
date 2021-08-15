@@ -32,19 +32,17 @@ const renderElement = (rootNode: VDomNode): HTMLElement | Text => {
   return elem
 }
 
-export const applyUpdate = (elem: HTMLElement, diff: VDomNodeUpdater): HTMLElement => {
+export const applyUpdate = (elem: HTMLElement | Text, diff: VDomNodeUpdater): HTMLElement | Text => {
   if (diff.kind == 'skip') return elem 
 
   if (diff.kind == 'replace') {
     const newElem = renderElement(diff.newNode)
     elem.replaceWith(newElem)
-    return newElem as HTMLElement
+    if(diff.callback) diff.callback(newElem)
+    return newElem
   }
 
-  if (diff.kind == 'remove') {
-    elem.remove()
-    return null
-  }
+  if('wholeText' in elem) throw new Error('invalid update for Text node')
 
   for (const att in diff.attributes.remove) {
     elem.removeAttribute(att)
@@ -78,11 +76,6 @@ const applyChildrenDiff = (elem: HTMLElement, operations: ChildUpdater[]) => {
       childElem.remove()
       offset -= 1
       continue
-    }
-
-    if (childUpdater.kind == 'replace') {
-      childElem.replaceWith(renderElement(childUpdater.newNode))
-      continue;
     }
 
     applyUpdate(childElem as HTMLElement, childUpdater)

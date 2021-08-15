@@ -8,27 +8,22 @@ export abstract class Component<P, S> {
     protected state: S
     
     private currentRootNode: VDomNode
-    private mountedElement: HTMLElement
+    private mountedElement: HTMLElement | Text
     
-    protected setState(state: S) {
+    protected setState(updater: (s:S) => S) {
         if(this.mountedElement == undefined) throw new Error("you are updating an unmounted component")
-        
-        this.state = state
-        this.update()
+        this.state = updater(this.state)
+        applyUpdate(this.mountedElement, this.getUpdateDiff())
     }
     
     public setProps(props: P): VDomNodeUpdater {
+        if(this.mountedElement == null)
+            throw new Error("You are setting the props of an inmounted component")
+        
+        // include in article?
+        this.state = this.componentWillRecieveProps(props, this.state)
         this.props = props
-        const newRootNode = this.render()
-        
-        if(this.currentRootNode) {
-            const diff = createDiff(this.currentRootNode, newRootNode)
-            this.currentRootNode = newRootNode
-            if(diff.kind == 'replace') console.warn('replacing in setProps')
-            return diff
-        }
-        
-        throw new Error("You are setting the props of an uninitialized component")
+        return this.getUpdateDiff()
     }
     
     public initProps(props: P): VDomNode {
@@ -37,20 +32,32 @@ export abstract class Component<P, S> {
         return this.currentRootNode
     }
     
-    public update() {
+    private getUpdateDiff() : VDomNodeUpdater {
         const newRootNode = this.render()
         const diff = createDiff(this.currentRootNode, newRootNode)
-        if(diff.kind == 'replace') console.warn('replacing in update')
+        if(diff.kind == 'replace') {
+            diff.callback = elem => this.mountedElement = elem
+        }
         this.currentRootNode = newRootNode
-        this.mountedElement = applyUpdate(this.mountedElement, diff)
+        return diff
     }
     
-    public notifyMounted(elem: HTMLElement) {
+    public notifyMounted(elem: HTMLElement | Text) {
         this.mountedElement = elem
-        this.componentDidMount()
+        setTimeout(() => this.componentDidMount())
+    }
+
+    public unmount() {
+        this.mountedElement = null
+        this.componentWillUnmount()
     }
     
     public componentDidMount() {}
+
+    public componentWillUnmount() {}
+
+    // include in article?
+    public componentWillRecieveProps(props: P, state: S): S { return state }
     
     public abstract render(): VDomNode
 }
@@ -68,7 +75,7 @@ export class CountersComponent extends Component<{}, { title: string }> {
                 'input',
                 {
                     value: this.state.title,
-                    oninput: (e: any) => this.setState({ title: e.target.value}),
+                    oninput: (e: any) => this.setState(s => ({ title: e.target.value})),
                     key: 'input'
                 },
                 ),
@@ -90,14 +97,14 @@ export class CountersComponent extends Component<{}, { title: string }> {
                 createText(this.props.title, 'title'),
                 createElement('hr', { key: 'hr' }),
                 createElement('button', {
-                    onclick: () => this.setState({count: this.state.count - 1}),
+                    onclick: () => this.setState(s => ({count: this.state.count - 1})),
                     key: '-'
                     },
                     createText('-')
                 ),
                 createText(this.state.count),
                 createElement('button', { 
-                    onclick: () => this.setState({count: this.state.count + 1}),
+                    onclick: () => this.setState(s => ({count: this.state.count + 1})),
                     key: '+'
                     },
                     createText('+')
@@ -127,7 +134,7 @@ export class CountersComponent extends Component<{}, { title: string }> {
         componentDidMount() {
             fetch("https://jsonplaceholder.typicode.com/todos")
             .then(res => res.json())
-            .then(items => this.setState({items}))
+            .then(items => this.setState(s => ({items})))
         }
         
         render() {
@@ -142,8 +149,8 @@ export class CountersComponent extends Component<{}, { title: string }> {
                 ) : createText('none', 'top'),
                 createElement('ul', { key: 'items'}, ...this.state.items.map(i => createElement(
                     'li', { 
-                        key: i.id,
-                        onclick: () => this.setState({ ...this.state, top: i })
+                        key: i.id.toString(),
+                        onclick: () => this.setState(s => ({ ...s, top: i }))
                     }, createText(i.title)
                 )))
             )

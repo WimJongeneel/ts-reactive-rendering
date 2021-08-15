@@ -6,7 +6,8 @@ type AttributesUpdater = {
 }
 
 interface InsertOperation {
-  kind: 'insert', node: VDomNode
+  kind: 'insert', 
+  node: VDomNode
 }
 
 interface UpdateOperation {
@@ -18,6 +19,7 @@ interface UpdateOperation {
 interface ReplaceOperation {
   kind: 'replace',
   newNode: VDomNode
+  callback?: (elem: HTMLElement | Text) => void
 }
 
 interface RemoveOperation {
@@ -31,7 +33,6 @@ interface SkipOperation {
 export type VDomNodeUpdater = 
   | UpdateOperation
   | ReplaceOperation
-  | RemoveOperation
   | SkipOperation
   
 export type ChildUpdater =
@@ -55,6 +56,10 @@ const remove = (): RemoveOperation => ({ kind: 'remove' })
 
 const insert = (node: VDomNode): InsertOperation => ({ kind: 'insert', node })
 
+const isEqual = (val1: any, val2: any): boolean => {
+  return false
+}
+
 export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdater => {
   // skip over text nodes with the same text
   if (oldNode.kind == 'text' && newNode.kind == 'text' && oldNode.value == newNode.value) {
@@ -68,19 +73,28 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdate
 
   if(oldNode.kind == 'component' && newNode.kind == 'component' && oldNode.component == newNode.component && oldNode.instance) {
     newNode.instance = oldNode.instance
+    if(isEqual(oldNode.props, newNode.props)) return skip()
     return newNode.instance.setProps(newNode.props)
   }
 
-  if(oldNode.kind == 'component' || newNode.kind == 'component') {
-    if(oldNode.kind == 'component') return replace(newNode)
-    if(newNode.kind == 'component') {
-      newNode.instance = new newNode.component()
-      return { kind: 'replace', newNode: newNode.instance.initProps(newNode.props) }
+    // callback for unmount?
+  if(oldNode.kind == 'component') {
+    oldNode.unmount()
+    oldNode.instance = null
+    return replace(newNode)
+  }
+  // replace with different component
+  if(newNode.kind == 'component') {
+    newNode.instance = new newNode.component()
+    return { 
+      kind: 'replace', 
+      newNode: newNode.instance.initProps(newNode.props),
+      callback: e => newNode.instance.notifyMounted(e)
     }
   }
 
   // If the tagname of a node is changed we have to replace it completly
-  if (oldNode.tagname != oldNode.tagname) {
+  if (oldNode.tagname != newNode.tagname) {
     return replace(newNode)
   }
 
@@ -108,7 +122,6 @@ const childsDiff = (oldChilds: VDomNode[], newChilds: VDomNode[]): ChildUpdater[
   let [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || [null]
 
   while(nextUpdateKey) {
-
     // first remove all old childs before the update
     while(remainingOldChilds[0] && remainingOldChilds[0][0] != nextUpdateKey) {
       operations.push(remove())
@@ -117,9 +130,9 @@ const childsDiff = (oldChilds: VDomNode[], newChilds: VDomNode[]): ChildUpdater[
 
     // then insert all new childs before the update
     while(remainingNewChilds[0] && remainingNewChilds[0][0] != nextUpdateKey) {
+      // or init component?
       operations.push(insert(remainingNewChilds.shift()[1]))
     }
-
     // create the update
     operations.push(createDiff(remainingOldChilds.shift()[1], remainingNewChilds.shift()[1]))
 
