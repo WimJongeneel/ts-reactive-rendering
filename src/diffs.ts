@@ -77,12 +77,12 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdate
     return newNode.instance.setProps(newNode.props)
   }
 
-    // callback for unmount?
   if(oldNode.kind == 'component') {
-    oldNode.unmount()
+    oldNode.instance.unmount()
     oldNode.instance = null
     return replace(newNode)
   }
+  
   // replace with different component
   if(newNode.kind == 'component') {
     newNode.instance = new newNode.component()
@@ -112,6 +112,23 @@ export const createDiff = (oldNode: VDomNode, newNode: VDomNode): VDomNodeUpdate
   return update(attUpdater, childsUpdater)
 }
 
+const removeUntilkey = (operations: ChildUpdater[], elems: [string | number, VDomNode][], key: string | number) => {
+  while(elems[0] && elems[0][0] != key) {
+    if(elems[0][1].kind == 'component') {
+      elems[0][1].instance.unmount()
+      elems[0][1].instance = null
+    }
+    operations.push(remove())
+    elems.shift()
+  }
+}
+
+const insertUntilKey = (operations: ChildUpdater[], elems: [string | number, VDomNode][], key: string | number) => {
+  while(elems[0] && elems[0][0] != key) {
+    operations.push(insert(elems.shift()[1]))
+  }
+}
+
 const childsDiff = (oldChilds: VDomNode[], newChilds: VDomNode[]): ChildUpdater[] => {
   const remainingOldChilds: [string | number, VDomNode][] = oldChilds.map(c => [c.key, c])
   const remainingNewChilds: [string | number, VDomNode][] = newChilds.map(c => [c.key, c])
@@ -122,17 +139,13 @@ const childsDiff = (oldChilds: VDomNode[], newChilds: VDomNode[]): ChildUpdater[
   let [ nextUpdateKey ] = remainingOldChilds.find(k => remainingNewChilds.map(k => k[0]).indexOf(k[0]) != -1) || [null]
 
   while(nextUpdateKey) {
-    // first remove all old childs before the update
-    while(remainingOldChilds[0] && remainingOldChilds[0][0] != nextUpdateKey) {
-      operations.push(remove())
-      remainingOldChilds.shift()
-    }
 
+    // first remove all old childs before the update
+    removeUntilkey(operations, remainingOldChilds, nextUpdateKey)
+    
     // then insert all new childs before the update
-    while(remainingNewChilds[0] && remainingNewChilds[0][0] != nextUpdateKey) {
-      // or init component?
-      operations.push(insert(remainingNewChilds.shift()[1]))
-    }
+    insertUntilKey(operations, remainingNewChilds, nextUpdateKey)
+
     // create the update
     operations.push(createDiff(remainingOldChilds.shift()[1], remainingNewChilds.shift()[1]))
 
@@ -141,13 +154,10 @@ const childsDiff = (oldChilds: VDomNode[], newChilds: VDomNode[]): ChildUpdater[
   }
 
   // remove all remaing old childs after the last update
-  while(remainingOldChilds.length > 0) {
-    operations.push(remove())
-    remainingOldChilds.shift()
-  }
+  removeUntilkey(operations, remainingOldChilds, undefined)
 
   // insert all remaing new childs after the last update
-  while(remainingNewChilds[0]) operations.push(insert(remainingNewChilds.shift()[1]))
+  insertUntilKey(operations, remainingNewChilds, undefined)
 
   return operations
 }

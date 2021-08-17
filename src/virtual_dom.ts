@@ -25,17 +25,17 @@ export interface VDOMText {
 }
 
 export type VDomNode = 
-| VDOMText
-| VDOMElement
-| VDOMComponent
+  | VDOMText
+  | VDOMElement
+  | VDOMComponent
 
 export const createElement = (tagname: string, props: VDOMAttributes & { key: string }, ...childeren: VDomNode[]): VDOMElement => {
   const key = props.key
   delete props.key
   return ({ kind: 'element',
-    tagname, props,
-    childeren, key
-  })
+  tagname, props,
+  childeren, key
+})
 }
 
 export const createComponent = <P extends object>(component: { new(): Component<P, any> }, props: P & { key: string }): VDOMComponent => {
@@ -49,32 +49,3 @@ export const createComponent = <P extends object>(component: { new(): Component<
 export const createText = (value: string | number | boolean, key: string = '') : VDOMText => ({
   key, kind: 'text', value: value.toString()
 })
-
-
-const dom: VDomNode = {
-  tagname: 'div',
-  props: {
-    class: 'container'
-  },
-  kind: 'element',
-  key: '',
-  childeren: [
-    {
-      kind: 'element',
-      tagname: 'h1',
-      key: '',
-      childeren: [
-        {
-          kind: 'text',
-          value: 'Hello word',
-          key: ''
-        }
-      ]
-    }
-  ]
-}
-
-const elem = 
-`<div class="container">
-<h1>Hello word</h1>
-</div>`

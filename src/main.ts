@@ -1,159 +1,79 @@
 import { createComponent, createElement, createText, VDomNode } from "./virtual_dom";
-import { createDiff } from "./diffs";
 import { renderDOM, applyUpdate } from "./render";
-import { CountersComponent, CounterComponent, ToDoContainer, Component } from "./component";
+import { Component } from "./component";
 
-// const app: VDomNode = {
-//   tagname: 'div',
-//   props: { 'id': 'root' },
-//   childeren: {
-//     h1: {
-//       tagname: 'h1',
-//       props: { 'class': 'header' },
-//       childeren: { txt: 'hello world'}
-//     },
-//     xx: {
-//       tagname: 'h3',
-//       props: {  'class': 'header' },
-//       childeren: { txt: 'h3 first'}
-//     },
-//     foo: {
-//       tagname: 'div',
-//       childeren: { txt: 'FOO' }
-//     },
-//     btn: {
-//       tagname: 'button',
-//       childeren: { txt: 'click me' },
-//       props: {
-//         'onclick': () => alert(1)
-//       }
-//     }
-//   }
-// }
-
-const count: VDomNode = createComponent(CountersComponent, { key: 'root'})
-
-const todos: VDomNode = createComponent(ToDoContainer, { key: 'root'}) 
-
-// const app1 = createElement(
-//   'div',
-//   { 'id': 'root-updated' },
-//   child(
-//     'h3', createElement(
-//       'h1',
-//       { 'class': 'header' },
-//       child('txt', createText('hello world - updated'))
-//     )
-//   ).set(
-//     'xx', createElement(
-//       'h3',
-//       {},
-//       child('txt', createText('h3 new'))
-//     )
-//   )
-//   .set(
-//     'yy', createElement(
-//       'h3',
-//       {},
-//       child('txt', createText('h3 2nd'))
-//     )
-//   )
-// )
-
-// const app2 = createElement(
-//   'div',
-//   { 'id': 'root-updated' },
-//   child(
-//     'yy', createElement(
-//       'b',
-//       {},
-//       child('txt', createText('h3 2nd'))
-//     )
-//   ).set(
-//     'xx', createElement(
-//       'h3',
-//       {},
-//       child('txt', createText('h3 new f'))
-//     )
-//   )
-// )
-
-interface HeaderComponentProps {
-    title: string
+interface NewItemFormState {
+    name: string
 }
 
-interface HeaderComponentState {
-    header: number
+interface NewItemFormProps {
+    addItem: (name: string) => void
 }
 
-class HeaderComponent extends Component<HeaderComponentProps, HeaderComponentState> {
-    state: HeaderComponentState = {
-        header: 1
-    }
+class NewItemForm extends Component<NewItemFormProps, NewItemFormState> {
+
+    state = { name: '' }
 
     render() {
         return createElement(
-            'h' + this.state.header, {
-                key: 'h',
-                onclick: () => this.setState(s => ({...s, header: s.header + 1}))
-            }, 
-            createText(this.props.title + ` (${this.state.header})`)
+            'form',
+            { key: 'f',
+              onsubmit: (e: Event) => {
+                e.preventDefault()
+                this.props.addItem(this.state.name)
+                this.setState(() => ({ name: '' }))
+              }
+            },
+            createElement('label', { key: 'l-n', 'for': 'i-n' }, createText('New item')),
+            createElement('input',
+                { key: 'i-n', id: 'i-n', 
+                  value: this.state.name,
+                  oninput: (e: any) => this.setState(s => ({...s, name: e.target.value})) }
+            ),
         )
     }
 }
 
-interface HeadersState {
-    title: string
-    headers: number
+interface ToDoItem {
+    name: string
+    done: boolean
 }
 
-class Headers extends Component<{}, HeadersState> {
+interface ToDoState {
+    items: ToDoItem[]
+}
 
-    state: HeadersState = {
-        headers: 1,
-        title: 'title'
+class ToDoComponent extends Component<{}, ToDoState> {
+
+    state: ToDoState = { items: [] }
+
+    toggleItem(index: number) {
+        this.setState(s => ({items: s.items.map((item, i) => {
+            if(index == i) return { ...item, done: !item.done }
+            return item
+        })}))
     }
 
     render() {
-        return createElement('root', {key: 'root'}, 
-            createElement(
-                'input',
-                {
-                    key: 'i',
-                    oninput: (e: any) => this.setState(s => ({...s, title: e.target.value})),
-                    value: this.state.title
-                }
-            ),
-            createElement(
-                'button',
-                {
-                    key: 'b',
-                    onclick: () => this.setState(s => ({...s, headers: s.headers + 1}))
-                },
-                createText('add')
-            ),
-            ...Array.from({length: 10}).map((_, i) => this.state.headers > i ? createComponent(
-                HeaderComponent,
-                {
-                    key: i.toString(),
-                    title: this.state.title
-                }
-            ) : createElement('span', { key: i.toString()}, createText(i.toString())))
+        return createElement('div', { key: 'root'},
+            createComponent(NewItemForm, {
+                key: 'form',
+                addItem: n => this.setState(s => ({ items: s.items.concat([{name: n, done: false}])}))
+            }),
+            createElement('ul', { key: 'items' }, 
+                ...this.state.items.map((item: ToDoItem, i) => 
+                    createElement( 'li', { key: i.toString()},
+                        createElement('button', { 
+                                key: 'btn',
+                                onclick: () => this.toggleItem(i)
+                            }, 
+                            createText(item.done ? 'done' : '-')),
+                        createText(item.name, 'label')
+                ))
+            )
         )
     }
 }
 
+renderDOM('root', createComponent(ToDoComponent, {key: 'root'}))
 
-const rootElem = renderDOM('root', createComponent(Headers, {key: 'r'}))
-
-
-// const diffV2 = createDiff(app, app1, true)
-// console.log(diffV2)
-
-// setTimeout(() => applyUpdate(rootElem, diffV2, rootElem), 1500)
-
-// const diffV3 = createDiff(app1, app2, true)
-// console.log(diffV3)
-
-
-// setTimeout(() => applyUpdate(rootElem, diffV3, rootElem), 3000)
